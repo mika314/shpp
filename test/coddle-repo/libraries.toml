@@ -1,0 +1,5 @@
+[[library]]
+type="file"
+name="shpp"
+path=".."
+includes=["shpp/shpp.hpp"]

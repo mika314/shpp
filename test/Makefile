@@ -1,0 +1,3 @@
+FORCE:
+	coddle
+	./test
