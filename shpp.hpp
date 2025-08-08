@@ -1,9 +1,36 @@
 #pragma once
 #include <iostream>
+#include <variant>
 #include <vector>
 
 namespace shpp
 {
+  struct InString
+  {
+    std::string data;
+  };
+  struct InStream
+  {
+    std::istream *is;
+  }; // non-owning; must outlive run()
+
+  // The type stored on the pipeline
+  using Input = std::variant<std::monostate, InString, InStream>;
+
+  // Factories (named on purpose; no implicit conversions)
+  inline InString in(std::string s)
+  {
+    return {std::move(s)};
+  }
+  inline InString in(std::string_view sv)
+  {
+    return {std::string(sv)};
+  }
+  inline InStream in(std::istream &is)
+  {
+    return {&is};
+  }
+
   // ——— Sinks (where output goes) ———
   struct CC_t
   {
@@ -31,10 +58,11 @@ namespace shpp
     static Cmd parse(std::string_view s);
   };
 
-  // ——— Pipeline ———
+  // Pipeline carries an Input instead of enum+fields
   struct Pipeline
   {
     std::vector<Cmd> stages;
+    Input stdin_src; // monostate = none
   };
 
   // ——— Result ———
@@ -105,6 +133,81 @@ namespace shpp
   {
     Pipeline pl;
     pl.stages.push_back(Cmd::parse(cmd));
+    return Pending(std::move(pl), ss.out, ss.err);
+  }
+
+  inline Pending operator%(CC_t, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), std::cout, std::cerr);
+  }
+  inline Pending operator%(SC_t sc, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), sc.out, std::cerr);
+  }
+  inline Pending operator%(CS_t cs, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), std::cout, cs.err);
+  }
+  inline Pending operator%(SS_t ss, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), ss.out, ss.err);
+  }
+
+  inline Pending operator&(CC_t, std::string_view cmd)
+  {
+    Pipeline pl;
+    pl.stages.push_back(Cmd::parse(cmd));
+    return Pending(std::move(pl), std::cout, std::cerr);
+  }
+  inline Pending operator&(SC_t sc, std::string_view cmd)
+  {
+    Pipeline pl;
+    pl.stages.push_back(Cmd::parse(cmd));
+    return Pending(std::move(pl), sc.out, std::cerr);
+  }
+  inline Pending operator&(CS_t cs, std::string_view cmd)
+  {
+    Pipeline pl;
+    pl.stages.push_back(Cmd::parse(cmd));
+    return Pending(std::move(pl), std::cout, cs.err);
+  }
+  inline Pending operator&(SS_t ss, std::string_view cmd)
+  {
+    Pipeline pl;
+    pl.stages.push_back(Cmd::parse(cmd));
+    return Pending(std::move(pl), ss.out, ss.err);
+  }
+
+  inline Pending operator&(CC_t, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), std::cout, std::cerr);
+  }
+  inline Pending operator&(SC_t sc, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), sc.out, std::cerr);
+  }
+  inline Pending operator&(CS_t cs, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
+    return Pending(std::move(pl), std::cout, cs.err);
+  }
+  inline Pending operator&(SS_t ss, Input src)
+  {
+    Pipeline pl;
+    pl.stdin_src = std::move(src);
     return Pending(std::move(pl), ss.out, ss.err);
   }
 
