@@ -425,7 +425,7 @@ static inline shpp::Result exec_pipeline(const shpp::Pipeline &pl, std::ostream 
           }
           else if constexpr (std::is_same_v<T, shpp::InStream>)
           {
-            if (!s.*guis)
+            if (!s.is)
               return;
             char buf[4096];
             while (s.is->good())
